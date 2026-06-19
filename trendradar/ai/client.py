@@ -9,6 +9,9 @@ AI 客户端模块
 import os
 from typing import Any, Dict, List
 
+# LiteLLM 导入时会联网拉取 model cost map，国内网络易 SSL 超时卡住
+os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
+
 from litellm import completion
 
 

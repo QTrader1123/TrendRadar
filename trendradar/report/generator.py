@@ -244,3 +244,69 @@ def generate_html_report(
         f.write(html_content)
 
     return snapshot_file
+
+
+def generate_markdown_report(
+    stats: List[Dict],
+    total_titles: int,
+    failed_ids: Optional[List] = None,
+    new_titles: Optional[Dict] = None,
+    id_to_name: Optional[Dict] = None,
+    mode: str = "daily",
+    rank_threshold: int = 3,
+    output_dir: str = "output",
+    date_folder: str = "",
+    time_filename: str = "",
+    render_markdown_func: Optional[Callable] = None,
+    report_metadata: Optional[Dict] = None,
+    translate_report_func: Optional[Callable] = None,
+) -> str:
+    """
+    生成 Markdown 报告
+
+    写入 output/md/日期/时间.md 与 output/md/latest/{mode}.md
+
+    Returns:
+        str: 生成的 Markdown 文件路径（时间戳快照路径）
+    """
+    snapshot_filename = f"{time_filename}.md"
+    snapshot_path = Path(output_dir) / "md" / date_folder
+    snapshot_path.mkdir(parents=True, exist_ok=True)
+    snapshot_file = str(snapshot_path / snapshot_filename)
+
+    report_data = prepare_report_data(
+        stats,
+        failed_ids,
+        new_titles,
+        id_to_name,
+        mode,
+        rank_threshold,
+    )
+
+    if translate_report_func:
+        report_data = translate_report_func(report_data)
+
+    if report_metadata:
+        _METADATA_KEYS = {
+            "hotlist_total", "platform_total", "rss_matched_count",
+            "rss_total_count", "rss_source_total", "rss_source_failed",
+        }
+        for key in _METADATA_KEYS:
+            if key in report_metadata:
+                report_data[key] = report_metadata[key]
+
+    if render_markdown_func:
+        md_content = render_markdown_func(report_data, total_titles, mode)
+    else:
+        md_content = f"# Report\n\n{report_data}"
+
+    with open(snapshot_file, "w", encoding="utf-8") as f:
+        f.write(md_content)
+
+    latest_dir = Path(output_dir) / "md" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    latest_file = latest_dir / f"{mode}.md"
+    with open(latest_file, "w", encoding="utf-8") as f:
+        f.write(md_content)
+
+    return snapshot_file

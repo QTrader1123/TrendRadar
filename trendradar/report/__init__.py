@@ -20,9 +20,11 @@ from trendradar.report.helpers import (
 )
 from trendradar.report.formatter import format_title_for_platform
 from trendradar.report.html import render_html_content
+from trendradar.report.markdown import render_markdown_content
 from trendradar.report.generator import (
     prepare_report_data,
     generate_html_report,
+    generate_markdown_report,
 )
 
 __all__ = [
@@ -34,7 +36,10 @@ __all__ = [
     "format_title_for_platform",
     # HTML 渲染
     "render_html_content",
+    # Markdown 渲染
+    "render_markdown_content",
     # 报告生成器
     "prepare_report_data",
     "generate_html_report",
+    "generate_markdown_report",
 ]

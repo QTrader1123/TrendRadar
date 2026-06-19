@@ -215,6 +215,7 @@ storage:
     sqlite: true
     txt: false
     html: true
+    markdown: true
     # 为 true 时：仅在 timeline 当前允许推送时生成 HTML
     html_only_when_push: false
   local:
@@ -259,6 +260,13 @@ ai_translation:
     hotlist: false
     rss: true
     standalone: true
+ima:
+  enabled: true
+  kb: "新闻趋势监测报告"
+  folder: '{date}'
+  uploader: ../kimiclaw/youtube_daily_report/scripts/upload_to_ima_kb.py
+  upload_on_ai_success: true
+  filename: '{time}_{period_name}.md'
 advanced:
   debug: false
   version_check_url: https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version

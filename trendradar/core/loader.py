@@ -370,6 +370,7 @@ def _load_storage_config(config_data: Dict) -> Dict:
 
     txt_enabled_env = _get_env_bool("STORAGE_TXT_ENABLED")
     html_enabled_env = _get_env_bool("STORAGE_HTML_ENABLED")
+    markdown_enabled_env = _get_env_bool("STORAGE_MARKDOWN_ENABLED")
     pull_enabled_env = _get_env_bool("PULL_ENABLED")
 
     return {
@@ -378,6 +379,7 @@ def _load_storage_config(config_data: Dict) -> Dict:
             "SQLITE": formats.get("sqlite", True),
             "TXT": txt_enabled_env if txt_enabled_env is not None else formats.get("txt", True),
             "HTML": html_enabled_env if html_enabled_env is not None else formats.get("html", True),
+            "MARKDOWN": markdown_enabled_env if markdown_enabled_env is not None else formats.get("markdown", False),
         },
         "LOCAL": {
             "DATA_DIR": local.get("data_dir", "output"),
@@ -395,6 +397,21 @@ def _load_storage_config(config_data: Dict) -> Dict:
             "ENABLED": pull_enabled_env if pull_enabled_env is not None else pull.get("enabled", False),
             "DAYS": _get_env_int("PULL_DAYS") or pull.get("days", 7),
         },
+    }
+
+
+def _load_ima_config(config_data: Dict) -> Dict:
+    """加载 IMA 知识库上传配置"""
+    ima = config_data.get("ima", {})
+    enabled_env = _get_env_bool("IMA_ENABLED")
+
+    return {
+        "ENABLED": enabled_env if enabled_env is not None else ima.get("enabled", False),
+        "KB": _get_env_str("IMA_KB") or ima.get("kb", ""),
+        "FOLDER": _get_env_str("IMA_FOLDER") or ima.get("folder", "{date}"),
+        "UPLOADER": _get_env_str("IMA_UPLOADER") or ima.get("uploader", ""),
+        "UPLOAD_ON_AI_SUCCESS": ima.get("upload_on_ai_success", True),
+        "FILENAME": ima.get("filename", "{time}_{period_name}.md"),
     }
 
 
@@ -602,6 +619,9 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 
     # 存储配置
     config["STORAGE"] = _load_storage_config(config_data)
+
+    # IMA 知识库上传配置
+    config["IMA"] = _load_ima_config(config_data)
 
     # Webhook 配置
     config.update(_load_webhook_config(config_data))

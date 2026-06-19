@@ -22,7 +22,7 @@ from trendradar.utils.time import DEFAULT_TIMEZONE, is_within_days, calculate_da
 from trendradar.ai import AIAnalyzer, AIAnalysisResult
 from trendradar.core.scheduler import ResolvedSchedule
 from trendradar.commands import check_all_versions, run_doctor, run_test_notification, handle_status_commands
-from trendradar.commands.version import _fetch_remote_version, _parse_version
+from trendradar.integrations.ima import should_upload_to_ima, upload_md_to_ima
 
 
 
@@ -666,8 +666,8 @@ class NewsAnalyzer:
         standalone_data: Optional[Dict] = None,
         schedule: ResolvedSchedule = None,
         rss_new_urls: Optional[set] = None,
-    ) -> Tuple[List[Dict], Optional[str], Optional[AIAnalysisResult], Optional[List[Dict]], Optional[Dict], Optional[List[Dict]]]:
-        """统一的分析流水线：数据处理 → 统计计算（关键词/AI筛选）→ AI分析 → HTML生成"""
+    ) -> Tuple[List[Dict], Optional[str], Optional[str], Optional[AIAnalysisResult], Optional[List[Dict]], Optional[Dict], Optional[List[Dict]]]:
+        """统一的分析流水线：数据处理 → 统计计算（关键词/AI筛选）→ AI分析 → HTML/MD 生成"""
 
         # 根据筛选策略选择数据处理方式
         if self.filter_method == "ai":
@@ -787,7 +787,39 @@ class NewsAnalyzer:
                 translate_report_func=translate_report_func,
             )
 
-        return stats, html_file, ai_result, rss_items, standalone_data, rss_new_items
+        report_metadata = {
+            "hotlist_total": total_titles,
+            "platform_total": len(self.ctx.platform_ids),
+            "rss_matched_count": self._rss_matched_count,
+            "rss_total_count": self._rss_total_count,
+            "rss_source_total": self._rss_source_total,
+            "rss_source_failed": self._rss_source_failed,
+        }
+
+        # Markdown 生成（如果启用）
+        md_file = None
+        if self.ctx.config["STORAGE"]["FORMATS"].get("MARKDOWN", False):
+            display_regions = self.ctx.config.get("DISPLAY", {}).get("REGIONS", {})
+            md_standalone = standalone_data if display_regions.get("STANDALONE", False) else None
+            md_ai = ai_result if display_regions.get("AI_ANALYSIS", True) else None
+            period_name = schedule.period_name if schedule else None
+            md_file = self.ctx.generate_markdown(
+                stats,
+                total_titles,
+                failed_ids=failed_ids,
+                new_titles=new_titles,
+                id_to_name=id_to_name,
+                mode=mode,
+                rss_items=rss_items,
+                rss_new_items=rss_new_items,
+                ai_analysis=md_ai,
+                standalone_data=md_standalone,
+                report_metadata=report_metadata,
+                translate_report_func=translate_report_func,
+                period_name=period_name,
+            )
+
+        return stats, html_file, md_file, ai_result, rss_items, standalone_data, rss_new_items
 
     def _send_notification_if_needed(
         self,
@@ -1433,6 +1465,7 @@ class NewsAnalyzer:
         word_groups, filter_words, global_filters = self.ctx.load_frequency_words(self.frequency_file)
 
         html_file = None
+        md_file = None
         stats = []
         ai_result = None
         title_info = None
@@ -1461,7 +1494,7 @@ class NewsAnalyzer:
                     all_results, historical_id_to_name, historical_title_info, raw_rss_items
                 )
 
-                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
+                stats, html_file, md_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
                     all_results,
                     self.report_mode,
                     historical_title_info,
@@ -1505,7 +1538,7 @@ class NewsAnalyzer:
                     all_results, historical_id_to_name, historical_title_info, raw_rss_items
                 )
 
-                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
+                stats, html_file, md_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
                     all_results,
                     self.report_mode,
                     historical_title_info,
@@ -1533,7 +1566,7 @@ class NewsAnalyzer:
                 standalone_data = self._prepare_standalone_data(
                     results, id_to_name, title_info, raw_rss_items
                 )
-                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
+                stats, html_file, md_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
                     results,
                     self.report_mode,
                     title_info,
@@ -1555,7 +1588,7 @@ class NewsAnalyzer:
             standalone_data = self._prepare_standalone_data(
                 results, id_to_name, title_info, raw_rss_items
             )
-            stats, html_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
+            stats, html_file, md_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
                 results,
                 self.report_mode,
                 title_info,
@@ -1575,6 +1608,22 @@ class NewsAnalyzer:
         if html_file:
             print(f"HTML报告已生成: {html_file}")
             print(f"最新报告已更新: output/html/latest/{self.report_mode}.html")
+
+        if md_file:
+            print(f"Markdown报告已生成: {md_file}")
+            print(f"最新 Markdown 已更新: output/md/latest/{self.report_mode}.md")
+
+        ima_config = self.ctx.config.get("IMA", {})
+        if md_file and should_upload_to_ima(ai_result, ima_config):
+            upload_md_to_ima(
+                md_file,
+                ima_config,
+                get_time_func=self.ctx.get_time,
+                period_name=schedule.period_name if schedule else None,
+                time_filename=self.ctx.format_time(),
+            )
+        elif md_file and ima_config.get("ENABLED"):
+            print("[IMA] 本次无 AI 分析结果，跳过上传（方案二：仅 AI 成功时推送）")
 
         # 发送通知
         if mode_strategy["should_send_notification"]:

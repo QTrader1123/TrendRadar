@@ -30,7 +30,9 @@ from trendradar.core import (
 from trendradar.report import (
     prepare_report_data,
     generate_html_report,
+    generate_markdown_report,
     render_html_content,
+    render_markdown_content,
 )
 from trendradar.notification import (
     render_feishu_content,
@@ -338,6 +340,74 @@ class AppContext:
             render_html_func=lambda *args, **kwargs: self.render_html(*args, rss_items=rss_items, rss_new_items=rss_new_items, ai_analysis=ai_analysis, standalone_data=standalone_data, **kwargs),
             report_metadata=report_metadata,
             translate_report_func=translate_report_func,
+        )
+
+    def generate_markdown(
+        self,
+        stats: List[Dict],
+        total_titles: int,
+        failed_ids: Optional[List] = None,
+        new_titles: Optional[Dict] = None,
+        id_to_name: Optional[Dict] = None,
+        mode: str = "daily",
+        rss_items: Optional[List[Dict]] = None,
+        rss_new_items: Optional[List[Dict]] = None,
+        ai_analysis: Optional[Any] = None,
+        standalone_data: Optional[Dict] = None,
+        report_metadata: Optional[Dict] = None,
+        translate_report_func: Optional[Any] = None,
+        period_name: Optional[str] = None,
+    ) -> str:
+        """生成 Markdown 报告"""
+        return generate_markdown_report(
+            stats=stats,
+            total_titles=total_titles,
+            failed_ids=failed_ids,
+            new_titles=new_titles,
+            id_to_name=id_to_name,
+            mode=mode,
+            rank_threshold=self.rank_threshold,
+            output_dir="output",
+            date_folder=self.format_date(),
+            time_filename=self.format_time(),
+            render_markdown_func=lambda *args, **kwargs: self.render_markdown(
+                *args,
+                rss_items=rss_items,
+                rss_new_items=rss_new_items,
+                ai_analysis=ai_analysis,
+                standalone_data=standalone_data,
+                period_name=period_name,
+                **kwargs,
+            ),
+            report_metadata=report_metadata,
+            translate_report_func=translate_report_func,
+        )
+
+    def render_markdown(
+        self,
+        report_data: Dict,
+        total_titles: int,
+        mode: str = "daily",
+        rss_items: Optional[List[Dict]] = None,
+        rss_new_items: Optional[List[Dict]] = None,
+        ai_analysis: Optional[Any] = None,
+        standalone_data: Optional[Dict] = None,
+        period_name: Optional[str] = None,
+    ) -> str:
+        """渲染 Markdown 内容"""
+        return render_markdown_content(
+            report_data=report_data,
+            total_titles=total_titles,
+            mode=mode,
+            region_order=self.region_order,
+            get_time_func=self.get_time,
+            rss_items=rss_items,
+            rss_new_items=rss_new_items,
+            display_mode=self.display_mode,
+            ai_analysis=ai_analysis,
+            show_new_section=self.show_new_section,
+            standalone_data=standalone_data,
+            period_name=period_name,
         )
 
     def render_html(
