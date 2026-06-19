@@ -80,6 +80,12 @@ class SQLiteStorageMixin:
             conn: 数据库连接
             db_type: 数据库类型 ("news" 或 "rss")
         """
+        # RSS 旧库可能缺少 guid 列；须先迁移再执行 schema，
+        # 否则 rss_schema.sql 中的 idx_rss_guid_feed 会因列不存在而失败，
+        # 导致后续 _migrate_rss_schema 无法执行。
+        if db_type == "rss":
+            self._migrate_rss_schema(conn)
+
         schema_path = self._get_schema_path(db_type)
 
         if schema_path.exists():
@@ -105,6 +111,9 @@ class SQLiteStorageMixin:
         """迁移 rss_items 表结构（为已有数据库添加 guid 列）"""
         cursor = conn.execute("PRAGMA table_info(rss_items)")
         columns = {row[1] for row in cursor.fetchall()}
+        if not columns:
+            # 新库尚无 rss_items，由 rss_schema.sql 创建完整结构
+            return
         if "guid" not in columns:
             conn.execute("ALTER TABLE rss_items ADD COLUMN guid TEXT DEFAULT ''")
             conn.execute("""
