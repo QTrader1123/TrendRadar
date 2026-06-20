@@ -23,6 +23,7 @@ from trendradar.ai import AIAnalyzer, AIAnalysisResult
 from trendradar.core.scheduler import ResolvedSchedule
 from trendradar.commands import check_all_versions, run_doctor, run_test_notification, handle_status_commands
 from trendradar.integrations.ima import should_upload_to_ima, upload_md_to_ima
+from trendradar.integrations.gmail_digest import fetch_gmail_digest
 
 
 
@@ -1661,6 +1662,14 @@ class NewsAnalyzer:
             if not self._initialize_and_check_config():
                 return
 
+            digest_config = self.ctx.config.get("GMAIL_DIGEST", {})
+            if digest_config.get("ENABLED") and digest_config.get("AUTO_FETCH_ON_RUN"):
+                from trendradar.commands.paid_daily import paid_daily_generated_today
+                if paid_daily_generated_today(self.ctx.get_time):
+                    print("[Gmail] 当日成品已生成，跳过 Gmail 查询")
+                else:
+                    fetch_gmail_digest(digest_config, get_time_func=self.ctx.get_time)
+
             mode_strategy = self._get_mode_strategy()
 
             # 抓取热榜数据
@@ -1675,6 +1684,10 @@ class NewsAnalyzer:
                 rss_items=rss_items, rss_new_items=rss_new_items,
                 raw_rss_items=raw_rss_items, rss_new_urls=rss_new_urls
             )
+
+            # 全球深度信号日报（B站充电专属）自动生成钩子
+            from trendradar.commands.paid_daily import maybe_auto_generate
+            maybe_auto_generate(self.ctx.config, get_time_func=self.ctx.get_time)
 
         except Exception as e:
             print(f"分析流程执行出错: {e}")
@@ -1697,16 +1710,28 @@ def main():
   --doctor               运行环境与配置体检
   --test-notification    发送测试通知到已配置渠道
 
+  --fetch-gmail-digest   从 Gmail 下载全球新闻日报附件
+  --digest-analyze       与 --fetch-gmail-digest 联用，解析并生成结构研究报告
+  --analyze-digest PATH  研究本地日报样例结构（无需 Gmail）
+  --paid-daily           生成全球深度信号日报（B站充电专属）
+  --paid-daily-ai        生成时调用 AI 生成今日总判断
+  --paid-digest PATH     指定环球新闻深度日报 MD（缺省取最新下载）
+
 示例:
-  python -m trendradar                    # 正常运行
-  python -m trendradar --show-schedule    # 查看当前调度状态
-  python -m trendradar --doctor           # 运行一键体检
-  python -m trendradar --test-notification # 测试通知渠道连通性
+  python -m trendradar --analyze-digest output/digest/samples/日报.html
+  python -m trendradar --fetch-gmail-digest --digest-analyze
+  python -m trendradar --paid-daily --paid-daily-ai
 """
     )
     parser.add_argument("--show-schedule", action="store_true", help="显示当前调度状态")
     parser.add_argument("--doctor", action="store_true", help="运行环境与配置体检")
     parser.add_argument("--test-notification", action="store_true", help="发送测试通知到已配置渠道")
+    parser.add_argument("--fetch-gmail-digest", action="store_true", help="从 Gmail 下载全球新闻日报附件")
+    parser.add_argument("--digest-analyze", action="store_true", help="下载后研究样例结构并生成报告")
+    parser.add_argument("--analyze-digest", metavar="PATH", help="研究本地日报样例结构")
+    parser.add_argument("--paid-daily", action="store_true", help="生成全球深度信号日报（B站充电专属）")
+    parser.add_argument("--paid-daily-ai", action="store_true", help="生成全球深度信号日报时调用 AI 总判断")
+    parser.add_argument("--paid-digest", metavar="PATH", help="指定环球新闻深度日报 MD 路径")
 
     args = parser.parse_args()
 
@@ -1726,6 +1751,31 @@ def main():
 
         if args.test_notification:
             ok = run_test_notification(config)
+            if not ok:
+                raise SystemExit(1)
+            return
+
+        if args.fetch_gmail_digest:
+            from trendradar.commands.fetch_gmail_digest import run_fetch_gmail_digest
+            ok = run_fetch_gmail_digest(config, analyze=args.digest_analyze)
+            if not ok:
+                raise SystemExit(1)
+            return
+
+        if args.analyze_digest:
+            from trendradar.commands.analyze_digest_sample import run_analyze_digest_sample
+            ok = run_analyze_digest_sample(config, args.analyze_digest)
+            if not ok:
+                raise SystemExit(1)
+            return
+
+        if args.paid_daily or args.paid_daily_ai or args.paid_digest:
+            from trendradar.commands.paid_daily import run_paid_daily
+            ok = run_paid_daily(
+                config,
+                md_path=args.paid_digest,
+                use_ai=args.paid_daily_ai,
+            )
             if not ok:
                 raise SystemExit(1)
             return

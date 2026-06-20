@@ -105,11 +105,15 @@ def upload_md_to_ima(
         str(upload_path),
         "--kb",
         kb_name,
-        "--folder",
-        folder_name,
     ]
+    if folder_name:
+        cmd += ["--folder", folder_name]
+        dest_desc = folder_name
+    else:
+        cmd += ["--root"]
+        dest_desc = "(根目录)"
 
-    print(f"[IMA] 上传: {upload_path.name} → 「{kb_name}」/ {folder_name}")
+    print(f"[IMA] 上传: {upload_path.name} → 「{kb_name}」/ {dest_desc}")
     try:
         result = subprocess.run(
             cmd,

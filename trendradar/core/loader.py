@@ -415,6 +415,63 @@ def _load_ima_config(config_data: Dict) -> Dict:
     }
 
 
+def _load_paid_daily_config(config_data: Dict) -> Dict:
+    """加载全球深度信号日报（B站充电专属）配置"""
+    pd = config_data.get("paid_daily", {})
+    enabled_env = _get_env_bool("PAID_DAILY_ENABLED")
+
+    return {
+        "ENABLED": enabled_env if enabled_env is not None else pd.get("enabled", True),
+        "OUTPUT_DIR": _get_env_str("PAID_DAILY_OUTPUT_DIR") or pd.get("output_dir", "output/paid_daily"),
+        "LEXICON_FILE": pd.get("lexicon_file", "config/paid_daily_lexicon.yaml"),
+        "USE_AI_BRIEF": pd.get("use_ai_brief", False),
+        "AI_MERGE_TOPICS": pd.get("ai_merge_topics", False),
+        "IMA_UPLOAD": pd.get("ima_upload", False),
+        "IMA_KB": pd.get("ima_kb", ""),
+        "IMA_FOLDER": pd.get("ima_folder", ""),
+        "AUTO_GENERATE_ON_RUN": pd.get("auto_generate_on_run", False),
+        "ONCE_PER_DAY": pd.get("once_per_day", True),
+    }
+
+
+def _load_gmail_digest_config(config_data: Dict) -> Dict:
+    """加载 Gmail 全球新闻日报附件下载配置"""
+    gd = config_data.get("gmail_digest", {})
+    enabled_env = _get_env_bool("GMAIL_DIGEST_ENABLED")
+
+    def _as_str_list(value) -> list:
+        if not value:
+            return []
+        if isinstance(value, str):
+            return [value]
+        return list(value)
+
+    return {
+        "ENABLED": enabled_env if enabled_env is not None else gd.get("enabled", False),
+        "IMAP_SERVER": _get_env_str("GMAIL_IMAP_SERVER") or gd.get("imap_server", "imap.gmail.com"),
+        "IMAP_PORT": _get_env_int_or_none("GMAIL_IMAP_PORT") or gd.get("imap_port", 993),
+        "USER": _get_env_str("GMAIL_DIGEST_USER") or gd.get("user", ""),
+        "PASSWORD": _get_env_str("GMAIL_DIGEST_PASSWORD") or gd.get("password", ""),
+        "FOLDER": _get_env_str("GMAIL_DIGEST_FOLDER") or gd.get("folder", "INBOX"),
+        "SENDER_CONTAINS": _as_str_list(gd.get("sender_contains") or gd.get("sender")),
+        "SUBJECT_CONTAINS": _as_str_list(gd.get("subject_contains") or gd.get("subject")),
+        "SOURCE_NAME": gd.get("source_name", "全球新闻日报"),
+        "NEWSLETTER_ID": gd.get("newsletter_id", ""),
+        "ATTACHMENT_EXTENSIONS": gd.get("attachment_extensions") or [".md"],
+        "ATTACHMENT_FILENAME": gd.get("attachment_filename", "环球新闻深度日报-{date}.md"),
+        "INTRO_FILENAME": gd.get("intro_filename", "环球新闻深度日报-{date}_导读.html"),
+        "PREFER_MD_ATTACHMENT": gd.get("prefer_md_attachment", True),
+        "OUTPUT_DIR": _get_env_str("GMAIL_DIGEST_OUTPUT_DIR") or gd.get("output_dir", "output/digest"),
+        "STATE_FILE": gd.get("state_file", "output/meta/gmail_digest_state.json"),
+        "LOOKBACK_DAYS": gd.get("lookback_days", 7),
+        "MARK_AS_READ": gd.get("mark_as_read", False),
+        "SAVE_EMAIL_BODY": gd.get("save_email_body", True),
+        "AUTO_FETCH_ON_RUN": gd.get("auto_fetch_on_run", False),
+        "PARSE_AFTER_FETCH": gd.get("parse_after_fetch", False),
+        "INTEGRATE_IN_REPORT": gd.get("integrate_in_report", False),
+    }
+
+
 def _load_webhook_config(config_data: Dict) -> Dict:
     """加载 Webhook 配置"""
     notification = config_data.get("notification", {})
@@ -622,6 +679,10 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 
     # IMA 知识库上传配置
     config["IMA"] = _load_ima_config(config_data)
+
+    # Gmail 全球新闻日报
+    config["GMAIL_DIGEST"] = _load_gmail_digest_config(config_data)
+    config["PAID_DAILY"] = _load_paid_daily_config(config_data)
 
     # Webhook 配置
     config.update(_load_webhook_config(config_data))

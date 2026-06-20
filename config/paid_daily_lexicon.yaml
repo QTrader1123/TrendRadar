@@ -1,0 +1,30 @@
+# 全球深度信号日报 - 交叉分析主题词典
+# 格式: 规范主题名 -> 别名列表（中英混合，匹配时统一小写）
+# 用于把国内热榜与全球深度语料按主题对齐，计算同题共振 / 内热外冷 / 外热内冷。
+# 日常维护：按当下热点增删条目即可，无需改代码。
+
+伊朗: [伊朗, iran, iranian, tehran, 德黑兰]
+以色列: [以色列, israel, israeli]
+霍尔木兹: [霍尔木兹, hormuz]
+加沙: [加沙, gaza]
+俄乌: [俄罗斯, 乌克兰, russia, ukraine, putin, 普京, 泽连斯基]
+特朗普: [特朗普, trump]
+美联储: [美联储, "fed ", federal reserve, rate cut, 加息, 降息, 利率]
+关税: [关税, tariff, tariffs]
+AI: [人工智能, "ai ", " ai", openai, chatgpt, 大模型, llm, anthropic]
+芯片: [芯片, 半导体, chip, semiconductor, nvidia, 英伟达, tsmc, 台积电]
+石油: [石油, 原油, oil, crude, opec, 布伦特, brent]
+黄金: [黄金, gold, 金价]
+比特币: [比特币, bitcoin, btc, 加密货币, crypto]
+台湾: [台湾, taiwan, taipei]
+日本: [日本, japan, tokyo, 日元, yen]
+韩国: [韩国, korea, seoul]
+印度: [印度, india, modi, 莫迪]
+欧盟: [欧盟, europe, "eu ", brussels, 欧洲]
+马斯克: [马斯克, musk, tesla, 特斯拉, spacex]
+苹果: [苹果, apple, iphone]
+股市: [股市, stock, stocks, equit, 纳斯达克, nasdaq, 标普, "s&p", a股, 港股]
+通胀: [通胀, inflation, cpi, 物价]
+选举: [选举, election, vote, primary, 大选]
+气候: [气候, climate, 碳, carbon, 排放, emission]
+移民: [移民, immigration, migrant, border, 边境]

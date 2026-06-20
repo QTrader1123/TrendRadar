@@ -262,11 +262,51 @@ ai_translation:
     standalone: true
 ima:
   enabled: true
-  kb: "新闻趋势监测报告"
-  folder: '{date}'
+  kb: 全球深度新闻日报
+  folder: ''                   # 留空=直接上传到知识库根目录
   uploader: ../kimiclaw/youtube_daily_report/scripts/upload_to_ima_kb.py
   upload_on_ai_success: true
-  filename: '{time}_{period_name}.md'
+  filename: '新闻趋势监测报告_{time}_{period_name}.md'
+# Gmail · Hugin & Munin 全球新闻日报（IMAP 附件下载）
+# 发件人 news@sahrimnir.net · 主题 Hugin & Munin · 6月19日
+# 凭证：环境变量 GMAIL_DIGEST_USER / GMAIL_DIGEST_PASSWORD（Gmail 应用专用密码）
+gmail_digest:
+  enabled: true
+  imap_server: imap.gmail.com
+  imap_port: 993
+  user: 'daominzhu@gmail.com'
+  password: ''   # 勿填登录密码！用环境变量 GMAIL_DIGEST_PASSWORD（16位应用专用密码）
+  folder: INBOX
+  source_name: "Hugin & Munin"
+  newsletter_id: hugin_munin
+  sender_contains:
+    - news@sahrimnir.net
+  subject_contains:
+    - Hugin
+  prefer_md_attachment: true
+  attachment_extensions:
+    - .md
+  attachment_filename: 环球新闻深度日报-{date}.md
+  intro_filename: 环球新闻深度日报-{date}_导读.html
+  output_dir: output/digest
+  lookback_days: 7
+  save_email_body: true
+  mark_as_read: false
+  auto_fetch_on_run: true
+  parse_after_fetch: true
+  integrate_in_report: false
+# 全球深度信号日报（B站充电专属成品）
+paid_daily:
+  enabled: true
+  output_dir: output/paid_daily
+  lexicon_file: config/paid_daily_lexicon.yaml   # 交叉分析主题词典（可日常维护）
+  use_ai_brief: true         # 用 AI 生成「今日总判断」
+  ai_merge_topics: true      # 用 AI 把零散文章归并为主题故事
+  ima_upload: true           # 生成后上传基础日报+详细日报到 IMA 知识库
+  ima_kb: 全球深度新闻日报    # 本产品专属知识库（留空则用 ima.kb）
+  ima_folder: ''             # 留空=直接上传到知识库根目录，不建子文件夹
+  auto_generate_on_run: true   # 每次 python -m trendradar 跑完分析后自动生成
+  once_per_day: true           # 当日成品已存在则跳过（避免三餐时段重复生成/重复 AI 成本）
 advanced:
   debug: false
   version_check_url: https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version
